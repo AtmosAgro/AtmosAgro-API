@@ -1,71 +1,77 @@
-# 📄 Atmos API - Listar Artefatos por Propriedade
+# Endpoint: GET /api/artefatos/propriedade/:propriedadeId
 
-## Endpoint: `/api/artefatos/propriedade/:propriedadeId` (GET)
+## Descrição
 
-**Descrição:**  
-Lista todos os artefatos (GeoTIFFs de NDVI, NDWI, etc.) vinculados a uma propriedade específica. Isso inclui tanto os processamentos globais da fazenda (ex: NDVI_TOTAL) quanto os processamentos individuais de cada talhão pertencente a ela. 
+Lista todos os artefatos GeoTIFF vinculados a uma propriedade específica.  
+Inclui tanto artefatos da **propriedade inteira** quanto artefatos de **talhões individuais** pertencentes a ela.
 
-> **Nota:** O endpoint utiliza o **Identificador Semântico** (`propriedade-data-indice`) para facilitar o agrupamento no Frontend.
+> O campo `caminho` (path interno do GCS) **não é retornado** por segurança.  
+> Para carregar um arquivo no mapa, use `GET /api/artefatos/:id/signed-url`.
 
-**Método:**  
+---
+
+## Método
+
 `GET`
 
-**Parâmetros de Requisição:**
+---
 
-**Path Params:**
-- `propriedadeId` (string, UUID, Obrigatório): ID da propriedade para buscar os arquivos.
+## Parâmetros de Requisição
 
-**Body:**  
-Nenhum.
+### Path Params
 
-**Resposta de Sucesso (200 OK):**
+| Param | Tipo | Obrigatório | Descrição |
+|---|---|---|---|
+| `propriedadeId` | string (UUID) | Sim | ID da propriedade |
 
-**Exemplo de Sucesso (O que fazer):**
+---
 
-**Requisição:**  
-`GET /api/artefatos/propriedade/8cc63dfa-42c9-4b84-a950-72077b283435`
-
-**Resposta:**  
-`Status: 200 OK`
+## Resposta de Sucesso (200 OK)
 
 ```json
 [
   {
     "id": "e9e0d9ef-ed04-429c-ae75-c1a3182ac6d2",
-    "identificador": "8cc63dfa-20260308-RGB_TOTAL",
+    "identificador": "8cc63dfa-20251229-NDVI",
+    "jobId": null,
+    "talhaoId": null,
     "propriedadeId": "8cc63dfa-42c9-4b84-a950-72077b283435",
     "tipo": "geotiff",
-    "indice": "RGB_TOTAL",
-    "caminho": "sentinel2/fazenda_toda_rgb.tif",
-    "dataReferencia": "2026-03-08T00:00:00.000Z",
-    "geradoEm": "2026-03-08T03:05:33.228Z",
-    "url": "/api/artefatos/e9e0d9ef-ed04-429c-ae75-c1a3182ac6d2/download",
+    "formato": null,
+    "indice": "NDVI",
+    "dataReferencia": "2025-12-29T00:00:00.000Z",
+    "geradoEm": "2025-12-29T10:00:00.000Z",
+    "url": "/api/artefatos/8cc63dfa-20251229-NDVI/download",
     "metadata": {
-        "escala": "fazenda_completa",
-        "sensor": "Sentinel-2"
+      "sensor": "Sentinel-2",
+      "escala": "fazenda_completa"
     },
     "talhao": null,
     "propriedade": {
-        "nome": "Usina Moreno"
+      "nome": "Usina Moreno"
     }
   },
   {
     "id": "a820340f-80f5-40a5-a99e-d68c50f235c8",
-    "identificador": "8cc63dfa-20260308-RGB_T01",
-    "propriedadeId": "8cc63dfa-42c9-4b84-a950-72077b283435",
+    "identificador": "8cc63dfa-20251229-NDWI",
+    "jobId": null,
     "talhaoId": "81c8e3d3-0eab-4412-b248-8d1cc2f21ba6",
+    "propriedadeId": null,
     "tipo": "geotiff",
-    "indice": "RGB",
-    "caminho": "sentinel2/rgb_test_mock.tif",
-    "dataReferencia": "2026-03-08T00:00:00.000Z",
-    "geradoEm": "2026-03-08T01:32:24.203Z",
-    "url": "/api/artefatos/a820340f-80f5-40a5-a99e-d68c50f235c8/download",
+    "formato": null,
+    "indice": "NDWI",
+    "dataReferencia": "2025-12-29T00:00:00.000Z",
+    "geradoEm": "2025-12-29T10:00:00.000Z",
+    "url": "/api/artefatos/8cc63dfa-20251229-NDWI/download",
+    "metadata": {
+      "sensor": "Sentinel-2"
+    },
     "talhao": {
-        "nome": "Talhão 01",
-        "codigo": "T01"
+      "nome": "Talhão 01",
+      "codigo": "T01"
     },
     "propriedade": {
-        "nome": "Usina Moreno"
+      "nome": "Usina Moreno"
     }
   }
 ]
@@ -73,12 +79,27 @@ Nenhum.
 
 ---
 
-**Respostas de Erro (O que NÃO fazer):**
+## Fluxo típico no Frontend
 
-**400 Bad Request:** `propriedadeId` inválido.
+```typescript
+// 1. Buscar artefatos disponíveis para a propriedade
+const artefatos = await listArtefatosByPropriedade(propriedadeId);
 
-**404 Not Found:** Propriedade não encontrada ou não pertence ao cliente do usuário.
+// 2. Usuário seleciona um artefato para visualizar no mapa
+const { signedUrl } = await getArtefatoSignedUrl(artefato.id);
 
-**401 Unauthorized:** Usuário não autenticado ou sem cliente associado.
+// 3. Carregar GeoTIFF diretamente do GCS
+const response = await fetch(signedUrl);
+const arrayBuffer = await response.arrayBuffer();
+const georaster = await parseGeoraster(arrayBuffer);
+```
 
-**500 Internal Server Error:** Erro na comunicação com o Google Cloud Storage ou banco de dados.
+---
+
+## Respostas de Erro
+
+| Status | Descrição |
+|---|---|
+| `400 Bad Request` | `propriedadeId` com formato inválido |
+| `401 Unauthorized` | Usuário não autenticado ou sem cliente associado |
+| `404 Not Found` | Propriedade não encontrada ou não pertence ao cliente |

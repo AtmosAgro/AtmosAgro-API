@@ -35,4 +35,11 @@ Embora os artefatos possam ser gerados para um talhão específico, a API passar
 4.  **Mock:** Atualizar o script de mock para popular esses novos campos.
 
 ---
-**Status:** Aguardando Aprovação para Implementação.
+**Status:** ✅ Implementado (Abril/2026)
+
+**O que foi feito:**
+- `src/utils/artefatos.utils.ts` — `parseCaminho()` e `gerarIdentificador()` implementados
+- `ArtefatosService.formatResponse()` gera identificador automaticamente do caminho GCS
+- Campo `caminho` removido do response (segurança)
+- `dataReferencia` e `indice` extraídos do caminho como fallback se não estiverem no banco
+- Script `scripts/mock-artefatos.ts` atualizado com caminhos no padrão correto

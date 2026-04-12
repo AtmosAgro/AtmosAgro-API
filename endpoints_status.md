@@ -54,11 +54,13 @@ Este documento detalha o estado atual dos endpoints da API, sua implementação,
 | `/artefatos` | `GET` | Listar todos os artefatos do cliente | ✅ Sim | ✅ Sim |
 | `/artefatos/propriedade/:id` | `GET` | Listar artefatos de uma propriedade | ✅ Sim | ✅ Sim |
 | `/artefatos/:id` | `GET` | Detalhar um artefato (metadados) | ✅ Sim | ✅ Sim |
-| `/artefatos/:id/download` | `GET` | Download direto (Proxy Stream) | ✅ Sim | ✅ Sim |
+| `/artefatos/:id/signed-url` | `GET` | Gera Signed URL temporária (15 min) para o GCS | ✅ Sim | ✅ Sim |
+| `/artefatos/:id/download` | `GET` | Download via Proxy Stream (fallback) | ✅ Sim | ✅ Sim |
 
 **Observações:**
-- A implementação atual utiliza **Proxy/Stream** (`/download`) em vez de **Signed URLs** diretas do GCS em todos os retornos de lista, divergindo parcialmente da documentação técnica.
-- DTOs e Validadores ainda não foram implementados (pendente).
+- O campo `caminho` (path interno GCS) **não é exposto** nas respostas (removido por segurança — Abril/2026).
+- O fluxo preferencial para o frontend é `signed-url`: a URL é gerada pela API e o arquivo é baixado diretamente do GCS pelo browser.
+- Validadores Zod para campos de busca ainda pendentes.
 
 ---
 
@@ -84,6 +86,8 @@ Este documento detalha o estado atual dos endpoints da API, sua implementação,
 ## 3. Resumo de Cobertura
 - **Funcionalidade Central (CRUD Geo):** 90% implementado.
 - **Autenticação:** 100% implementado.
-- **Artefatos (GCS):** 100% implementado.
+- **Artefatos (GCS):** 100% implementado (inclui Signed URL — Abril/2026).
 - **Pipeline de Imagens:** 10% (Planejamento).
-- **Documentação Detalhada:** 90% concluída.
+- **Documentação Detalhada:** 95% concluída.
+
+*Última atualização: Abril/2026*

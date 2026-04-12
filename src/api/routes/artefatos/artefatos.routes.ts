@@ -36,14 +36,24 @@ router.get(
 );
 
 /**
+ * @route GET /api/artefatos/:id/signed-url
+ * @desc Gera e retorna uma Signed URL temporária (15 min) para o arquivo no GCS.
+ *       O frontend usa esta URL para carregar o GeoTIFF diretamente, sem intermediação.
+ */
+router.get(
+  '/:id/signed-url',
+  authMiddleware,
+  (req, res, next) => artefatosController.getSignedUrl(req, res).catch(next)
+);
+
+/**
  * @route GET /api/artefatos/:id/download
- * @desc Redireciona para download direto do arquivo no GCS.
+ * @desc Fornece os bytes do arquivo via proxy/stream (fallback ou download direto).
  */
 router.get(
   '/:id/download',
   authMiddleware,
   (req, res, next) => {
-    // Note: Usamos next para tratar erros assíncronos
     artefatosController.download(req, res).catch(next);
   }
 );

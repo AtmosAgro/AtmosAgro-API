@@ -6,24 +6,35 @@ const PROPRIEDADE_ID = '8cc63dfa-42c9-4b84-a950-72077b283435';
 async function main() {
   console.log('--- Iniciando Mock de Artefatos Diretos para Propriedade 8cc63dfa ---');
 
-  // 1. Criar os artefatos vinculados DIRETAMENTE à propriedade
+  // Artefatos com caminho no padrão: processed/{propriedadeId}/{YYYY-MM-DD}_{INDICE}.tif
   const artefatos = [
     {
       tipo: 'geotiff' as const,
-      indice: 'NDVI_TOTAL',
-      caminho: 'sentinel2/fazenda_toda_ndvi.tif',
+      indice: 'NDVI',
+      caminho: `processed/${PROPRIEDADE_ID}/2025-12-29_NDVI.tif`,
+      identificador: `${PROPRIEDADE_ID.slice(0, 8)}-20251229-NDVI`,
       propriedadeId: PROPRIEDADE_ID,
-      dataReferencia: new Date('2026-03-08'),
+      dataReferencia: new Date('2025-12-29'),
       metadata: { sensor: 'Sentinel-2', escala: 'fazenda_completa' }
     },
     {
       tipo: 'geotiff' as const,
-      indice: 'RGB_TOTAL',
-      caminho: 'sentinel2/fazenda_toda_rgb.tif',
+      indice: 'NDWI',
+      caminho: `processed/${PROPRIEDADE_ID}/2025-12-29_NDWI.tif`,
+      identificador: `${PROPRIEDADE_ID.slice(0, 8)}-20251229-NDWI`,
+      propriedadeId: PROPRIEDADE_ID,
+      dataReferencia: new Date('2025-12-29'),
+      metadata: { sensor: 'Sentinel-2', escala: 'fazenda_completa' }
+    },
+    {
+      tipo: 'geotiff' as const,
+      indice: 'NDVI',
+      caminho: `processed/${PROPRIEDADE_ID}/2026-03-08_NDVI.tif`,
+      identificador: `${PROPRIEDADE_ID.slice(0, 8)}-20260308-NDVI`,
       propriedadeId: PROPRIEDADE_ID,
       dataReferencia: new Date('2026-03-08'),
       metadata: { sensor: 'Sentinel-2', escala: 'fazenda_completa' }
-    }
+    },
   ];
 
   for (const art of artefatos) {

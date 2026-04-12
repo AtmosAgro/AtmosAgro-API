@@ -38,6 +38,19 @@ export class ArtefatosController {
   }
 
   /**
+   * Gera e retorna uma Signed URL temporária (15 min) para o arquivo no GCS.
+   * Usado pelo frontend para carregar GeoTIFFs diretamente, sem passar pela API.
+   */
+  async getSignedUrl(req: Request, res: Response): Promise<Response> {
+    const { id } = req.params;
+    if (!req.user || !req.user.clienteId) {
+      throw new UnauthorizedError('Usuário não autenticado ou sem cliente associado.');
+    }
+    const result = await this.artefatosService.getSignedUrl(id, req.user.clienteId);
+    return res.status(200).json(result);
+  }
+
+  /**
    * Fornece os bytes do arquivo diretamente (Proxy/Stream) sem expor URLs externas.
    */
   async download(req: Request, res: Response): Promise<void> {
@@ -56,7 +69,7 @@ export class ArtefatosController {
     res.setHeader('Content-Type', contentType);
 
     // Conecta o fluxo de dados do Google direto na resposta da nossa API
-    stream.on('error', (err) => {
+    stream.on('error', (_err) => {
       res.status(500).end('Erro ao baixar arquivo do storage.');
     });
 

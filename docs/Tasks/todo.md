@@ -9,9 +9,9 @@
 - [x] Criar script de Seed robusto para Usina Moreno (Mocks).
 
 ## 🚀 Próximos Passos (Artefatos & Pipeline)
-- [ ] Implementar DTOs reais no código para ocultar campos internos (`caminho`).
+- [x] Implementar DTOs reais no código para ocultar campos internos (`caminho`). *(campo removido do response — Abril/2026)*
 - [ ] Criar Validadores (Zod) para os novos campos de busca.
-- [ ] Avaliar transição de Proxy Stream para Signed URLs diretas.
+- [x] Avaliar transição de Proxy Stream para Signed URLs diretas. *(implementado `GET /:id/signed-url` — Abril/2026)*
 
 ## 🚀 Próximos Passos (Pipeline de Imagens)
 - [ ] Implementar endpoints de gestão do Pipeline (`POST /api/pipeline`, `GET /status`).
