@@ -46,16 +46,4 @@ router.get(
   (req, res, next) => artefatosController.getSignedUrl(req, res).catch(next)
 );
 
-/**
- * @route GET /api/artefatos/:id/download
- * @desc Fornece os bytes do arquivo via proxy/stream (fallback ou download direto).
- */
-router.get(
-  '/:id/download',
-  authMiddleware,
-  (req, res, next) => {
-    artefatosController.download(req, res).catch(next);
-  }
-);
-
 export default router;

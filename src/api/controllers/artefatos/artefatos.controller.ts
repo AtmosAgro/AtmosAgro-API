@@ -50,29 +50,4 @@ export class ArtefatosController {
     return res.status(200).json(result);
   }
 
-  /**
-   * Fornece os bytes do arquivo diretamente (Proxy/Stream) sem expor URLs externas.
-   */
-  async download(req: Request, res: Response): Promise<void> {
-    const { id } = req.params;
-    if (!req.user || !req.user.clienteId) {
-      throw new UnauthorizedError('Usuário não autenticado ou sem cliente associado.');
-    }
-
-    const { stream, fileName, tipo } = await this.artefatosService.downloadStream(id, req.user.clienteId);
-
-    // Configura os headers para o navegador entender que é um download de arquivo
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-
-    // Mapeia tipos comuns se necessário (ex: geotiff -> image/tiff)
-    const contentType = tipo === 'geotiff' ? 'image/tiff' : 'application/octet-stream';
-    res.setHeader('Content-Type', contentType);
-
-    // Conecta o fluxo de dados do Google direto na resposta da nossa API
-    stream.on('error', (_err) => {
-      res.status(500).end('Erro ao baixar arquivo do storage.');
-    });
-
-    stream.pipe(res);
-  }
 }

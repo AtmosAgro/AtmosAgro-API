@@ -43,7 +43,7 @@ export class ArtefatosService {
       identificador,
       dataReferencia,
       indice,
-      url: `/api/artefatos/${identificador}/download`,
+      url: `/api/artefatos/${identificador}/signed-url`,
     };
   }
 
@@ -111,29 +111,4 @@ export class ArtefatosService {
     return { signedUrl, expiresAt };
   }
 
-  /**
-   * Retorna um stream de leitura do arquivo validando tenancy.
-   */
-  async downloadStream(artefatoId: string, authClienteId: string) {
-    const artefato = await this.artefatosRepository.findById(artefatoId);
-
-    if (!artefato) {
-      throw new NotFoundError('Artefato não encontrado');
-    }
-
-    const artefatosClienteId = artefato.talhao?.propriedade?.clienteId || artefato.propriedade?.clienteId;
-    
-    if (artefatosClienteId !== authClienteId) {
-      throw new ForbiddenError('Acesso negado a este artefato');
-    }
-
-    const stream = this.storage.getReadStream(artefato.caminho);
-    const fileName = artefato.caminho.split('/').pop() || 'download.tif';
-
-    return {
-      stream,
-      fileName,
-      tipo: artefato.tipo
-    };
-  }
 }
