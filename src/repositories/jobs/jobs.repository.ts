@@ -55,4 +55,19 @@ export class JobsRepository {
       data: { status, ...extraData },
     });
   }
+
+  async expireStale(olderThan: Date): Promise<number> {
+    const result = await prisma.job.updateMany({
+      where: {
+        status: JobStatus.running,
+        iniciadoEm: { lt: olderThan },
+      },
+      data: {
+        status: JobStatus.failed,
+        finalizadoEm: new Date(),
+        erroMensagem: 'Job expirado por inatividade.',
+      },
+    });
+    return result.count;
+  }
 }
