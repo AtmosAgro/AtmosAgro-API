@@ -18,7 +18,7 @@ export async function processSatelliteJob(job: Job): Promise<void> {
     return;
   }
 
-  const { jobId, talhaoId, clienteId, geometry, indices, dateRange, cloudCoverMax } =
+  const { jobId, propriedadeId, clienteId, geometry, indices, dateRange, cloudCoverMax } =
     job.data as JobPayload;
 
   logger.info({ jobId, attempt: job.attemptsMade + 1 }, 'Processing satellite job');
@@ -27,7 +27,7 @@ export async function processSatelliteJob(job: Job): Promise<void> {
 
   const payload: CoreProcessPayload = {
     job_id: jobId,
-    talhao_id: talhaoId,
+    propriedade_id: propriedadeId,
     cliente_id: clienteId,
     geometry,
     date_range: dateRange,

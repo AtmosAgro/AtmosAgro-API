@@ -1,6 +1,6 @@
 import { Job, JobStatus } from '@prisma/client';
 import { JobsRepository } from '../../repositories/jobs/jobs.repository';
-import { TalhaoRepository } from '../../repositories/talhoes/talhoes.repository';
+import { PropriedadeRepository } from '../../repositories/propriedades/propriedades.repository';
 import { ArtefatosRepository } from '../../repositories/artefatos/artefatos.repository';
 import { jobQueue } from '../../workers/queues/job.queue';
 import { CreateJobDto, JobResponseDto } from '../../dtos/jobs/jobs.dto';
@@ -12,19 +12,19 @@ const STALE_JOB_MINUTES = 60;
 export class JobsService {
   constructor(
     private readonly jobsRepository: JobsRepository = new JobsRepository(),
-    private readonly talhaoRepository: TalhaoRepository = new TalhaoRepository(),
+    private readonly propriedadeRepository: PropriedadeRepository = new PropriedadeRepository(),
     private readonly artefatosRepository: ArtefatosRepository = new ArtefatosRepository()
   ) {}
 
   async create(clienteId: string, dto: CreateJobDto): Promise<JobResponseDto> {
-    const talhao = await this.talhaoRepository.findByIdWithPropriedade(dto.talhaoId);
+    const propriedade = await this.propriedadeRepository.findById(dto.propriedadeId);
 
-    if (!talhao) {
-      throw new ApplicationError('Talhão não encontrado.', 404);
+    if (!propriedade) {
+      throw new ApplicationError('Propriedade não encontrada.', 404);
     }
 
-    if (talhao.propriedade?.clienteId !== clienteId) {
-      throw new ApplicationError('Acesso negado a este talhão.', 403);
+    if (propriedade.clienteId !== clienteId) {
+      throw new ApplicationError('Acesso negado a esta propriedade.', 403);
     }
 
     const job = await this.jobsRepository.create({
@@ -34,19 +34,17 @@ export class JobsService {
         dateRange: dto.dateRange,
         indices: dto.indices ?? [],
         cloudCoverMax: dto.cloudCoverMax,
-        talhaoId: dto.talhaoId,
+        propriedadeId: dto.propriedadeId,
       },
       cliente: { connect: { id: clienteId } },
-      propriedade: { connect: { id: talhao.propriedadeId! } },
-      talhao: { connect: { id: dto.talhaoId } },
+      propriedade: { connect: { id: dto.propriedadeId } },
     });
 
     await jobQueue.add('process', {
       jobId: job.id,
-      talhaoId: dto.talhaoId,
+      propriedadeId: dto.propriedadeId,
       clienteId,
-      propriedadeId: talhao.propriedadeId!,
-      geometry: talhao.geojson as Record<string, unknown>,
+      geometry: propriedade.geojson as Record<string, unknown>,
       indices: dto.indices ?? [],
       dateRange: dto.dateRange,
       cloudCoverMax: dto.cloudCoverMax,
@@ -97,7 +95,7 @@ export class JobsService {
               tamanhoBytes: artefato.tamanhoBytes ?? null,
             },
             job: { connect: { id: jobId } },
-            talhao: { connect: { id: job.talhaoId! } },
+            propriedade: { connect: { id: job.propriedadeId! } },
           }
         )
       )

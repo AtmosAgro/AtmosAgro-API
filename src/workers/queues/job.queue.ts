@@ -4,9 +4,8 @@ import { env } from '@config/env';
 
 export interface JobPayload {
   jobId: string;
-  talhaoId: string;
-  clienteId: string;
   propriedadeId: string;
+  clienteId: string;
   geometry: Record<string, unknown>;
   indices: string[];
   dateRange: { start: string; end: string };
