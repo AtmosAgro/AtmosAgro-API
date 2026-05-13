@@ -3,7 +3,7 @@ import { logger } from '@config/logger';
 
 export interface CoreProcessPayload {
   job_id: string;
-  talhao_id: string;
+  propriedade_id: string;
   cliente_id: string;
   geometry: Record<string, unknown>;
   date_range: { start: string; end: string };

@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { JobStatus } from '@prisma/client';
 
 export const createJobSchema = z.object({
-  talhaoId: z.string().uuid('ID de talhão inválido.'),
+  propriedadeId: z.string().uuid('ID de propriedade inválido.'),
   dateRange: z.object({
     start: z.string().date('Data de início inválida (esperado YYYY-MM-DD).'),
     end: z.string().date('Data de fim inválida (esperado YYYY-MM-DD).'),
