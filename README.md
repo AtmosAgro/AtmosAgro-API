@@ -1,105 +1,70 @@
-# Nova API Atmos (Express + Prisma)
+# 🛰️ CanaVision API (AtmosAgro)
 
-Este diretório abriga a nova API em Node.js + TypeScript usando Express, Zod e Prisma. A estrutura segue o planejamento descrito em `Tasks/Planejamento_API.md`.
+API Node.js de alto desempenho para orquestração de processamento de imagens de satélite e gestão agronômica. Desenvolvida com **Express**, **TypeScript**, **Prisma (PostgreSQL)** e integração nativa com **Google Cloud Storage**.
 
-## Estrutura principal
-- `src/app.ts` – configuração do Express (middlewares, rotas).
-- `src/server.ts` – bootstrap HTTP/Workers.
-- `src/api/` – controladores, rotas e validadores por domínio.
-- `src/services/` – regras de negócio/use cases.
-- `src/repositories/` – camada de acesso a dados (Prisma/DB).
-- `src/integrations/` – conectores externos (core Python, SICAR, storage).
-- `src/workers/` – filas e processadores de jobs.
-- `prisma/` – schema (`schema.prisma`) e migrations/seed quando aplicável.
+## 🚀 Funcionalidades Principais
+- **Autenticação Multitenant:** Gestão de usuários e clientes via Supabase Auth com isolamento rigoroso de dados (`clienteId`).
+- **Gestão Geoespacial:** CRUD de Propriedades e Talhões com suporte a geometrias complexas (PostGIS).
+- **Entrega de Mapas:** Geração de **Signed URLs** para visualização e download de GeoTIFFs (NDVI, NDWI) armazenados no GCS.
+- **Orquestração de Jobs:** Pipeline assíncrono para processamento de imagens Sentinel-2 via core Python.
 
-## Setup rápido
+## 🏗️ Estrutura do Projeto
+- `src/api/` – Controladores, rotas e validadores (Zod) organizados por domínio.
+- `src/services/` – Camada de lógica de negócio e orquestração.
+- `src/repositories/` – Abstração de acesso ao banco via Prisma.
+- `src/integrations/` – Conectores (GCS, SICAR, Supabase).
+- `docs/` – Documentação detalhada dos endpoints (padrão Confluence).
+
+## 🛠️ Setup do Ambiente
+
+### Pré-requisitos
+- Node.js LTS (v20+)
+- PostgreSQL com extensões `postgis` e `uuid-ossp`
+- Google Cloud SDK (autenticado) para acesso ao GCS
+
+### Instalação
 ```bash
-cd api
-cp .env.example .env                # ajuste DATABASE_URL e todos os SUPABASE_*
 npm install
-npm run prisma:generate             # gera o client tipado
-# Opcional: executar migrações com prisma migrate ou db push
-npm run dev                         # inicia o servidor em modo watch
+
+cp .env.example .env
+
+npm run prisma:generate
+
+npm run dev
 ```
 
-### Banco (Supabase/PostgreSQL)
-O schema utiliza campos `geometry` e `uuid_generate_v4()`. Em qualquer ambiente novo execute:
-
+### Configuração do Banco
+O schema utiliza campos espaciais. Em qualquer ambiente novo, garanta as extensões:
 ```sql
 CREATE EXTENSION IF NOT EXISTS postgis;
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";.
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 ```
 
-As migrations do Prisma assumem que essas extensões existem. Para desenvolvimento:
+## 📦 Variáveis de Ambiente Necessárias (.env)
+| Variável | Descrição |
+| :--- | :--- |
+| `DATABASE_URL` | String de conexão PostgreSQL |
+| `GCS_BUCKET` | Nome do bucket para armazenamento de GeoTIFFs |
+| `SUPABASE_URL` | Endpoint do seu projeto Supabase |
+| `SUPABASE_ANON_KEY` | Chave anônima para autenticação |
+| `SUPABASE_JWT_SECRET` | Secret para validação de tokens |
 
+## 📖 Documentação da API
+A documentação detalhada de cada domínio pode ser encontrada em:
+- `docs/api/Autenticacao/` - Fluxos de login e registro.
+- `docs/api/Propriedades/` - Gestão de fazendas.
+- `docs/api/Imagens/` - **Download e visualização de GeoTIFFs.**
+- `docs/api/Talhoes/` - Subdivisões e áreas de plantio.
+
+## 🐳 Docker e Deploy
+A API está preparada para execução no **Google Cloud Run**.
 ```bash
-npm run prisma:migrate dev    # cria/atualiza o schema localmente (interativo)
-```
-
-Para deploy/CI use:
-
-```bash
-npm run prisma:generate
-npx prisma migrate deploy     # aplica apenas migrations existentes
-```
-
-### Modelo de `.env`
-
-```dotenv
-# Runtime
-NODE_ENV=development
-PORT=8080
-LOG_LEVEL=info
-DEBUG_REQUEST_LOGS=false
-
-# Banco de dados (exemplo Supabase com SSL obrigatório)
-DATABASE_URL=...
-# REDIS_URL=redis://localhost:6379/0
-
-# Integrações externas
-SICAR_API_BASE=https://www.car.gov.br/public/api
-CORE_WORKFLOW_BIN=python server.py
-
-# Supabase Auth
-SUPABASE_URL=https://<your-project>.supabase.co
-SUPABASE_ANON_KEY=change-me-anon
-SUPABASE_SERVICE_ROLE_KEY=change-me-service-role
-SUPABASE_PASSWORD_RESET_REDIRECT=https://app.example.com/reset-password
-SUPABASE_JWT_SECRET=change-me-jwt-secret
-```
-
-> Copie este conteúdo para `.env` e ajuste `DATABASE_URL` + todas as variáveis `SUPABASE_*` antes de iniciar a API. Defina `DEBUG_REQUEST_LOGS=true` apenas em ambientes de debug para registrar o JSON recebido com sucesso.
-
-### Docker / Cloud Run
-```bash
-# Build e teste local
-docker build -t canavision-api .
-docker run --env-file .env -p 3333:3333 canavision-api
-
-# Ciclo rápido (VM ou servidor dedicado)
-docker stop canavision-api && docker rm canavision-api 2>/dev/null || true
-docker build -t canavision-api:latest .
-docker run -d --name canavision-api \
-  --restart unless-stopped \
-  --env-file /caminho/para/.env \
-  -p 8080:8080 \
-  canavision-api:latest
-docker logs -f canavision-api
-
-# Build no Cloud Build e deploy no Cloud Run
+# Build e Deploy via Cloud Build
 gcloud builds submit --tag gcr.io/<PROJECT_ID>/canavision-api .
-gcloud run deploy canavision-api \
-  --image gcr.io/<PROJECT_ID>/canavision-api \
-  --region <REGION> \
-  --port 8080 \
-  --allow-unauthenticated \
-  --set-env-vars "DATABASE_URL=...,SUPABASE_URL=...,SUPABASE_ANON_KEY=...,SUPABASE_SERVICE_ROLE_KEY=...,SUPABASE_PASSWORD_RESET_REDIRECT=...,SUPABASE_JWT_SECRET=...,SICAR_API_BASE=...,CORE_WORKFLOW_BIN=..."
+
+# Deploy Cloud Run
+gcloud run deploy canavision-api --image gcr.io/<PROJECT_ID>/canavision-api
 ```
 
-Em execução no Cloud Run, **não** force a variável `PORT`: o serviço já injeta `PORT=8080` automaticamente e o `env.PORT` da aplicação acompanhará o valor correto.
-
-### Status atual (Nov/2025)
-- Fluxo completo de autenticação usa **Supabase Auth** (registro, login, refresh e reset) — o backend apenas orquestra chamadas ao Supabase e sincroniza o usuário no Prisma (`usuarios`).
-- Prisma conectado ao Postgres Supabase com migrations versionadas em `prisma/migrations`.
-- Dockerfile compatível com Cloud Build/Cloud Run (instala dependências, roda `prisma generate` e `npm run build`).
-- `.env.example` documenta todas as variáveis necessárias para desenvolvimento/produção.
+---
+© 2026 AtmosAgro - Inteligência Geográfica para o Campo.

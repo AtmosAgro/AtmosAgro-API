@@ -6,6 +6,16 @@ const router = Router();
 const artefatosController = new ArtefatosController();
 
 /**
+ * @route GET /api/artefatos
+ * @desc Lista todos os artefatos vinculados ao cliente autenticado (todas as suas propriedades).
+ */
+router.get(
+  '/',
+  authMiddleware,
+  (req, res, next) => artefatosController.listAll(req, res).catch(next)
+);
+
+/**
  * @route GET /api/artefatos/propriedade/:propriedadeId
  * @desc Lista todos os artefatos (GeoTIFFs, etc) de uma propriedade com URLs assinadas.
  */
@@ -26,16 +36,14 @@ router.get(
 );
 
 /**
- * @route GET /api/artefatos/:id/download
- * @desc Redireciona para download direto do arquivo no GCS.
+ * @route GET /api/artefatos/:id/signed-url
+ * @desc Gera e retorna uma Signed URL temporária (15 min) para o arquivo no GCS.
+ *       O frontend usa esta URL para carregar o GeoTIFF diretamente, sem intermediação.
  */
 router.get(
-  '/:id/download',
+  '/:id/signed-url',
   authMiddleware,
-  (req, res, next) => {
-    // Note: Usamos next para tratar erros assíncronos
-    artefatosController.download(req, res).catch(next);
-  }
+  (req, res, next) => artefatosController.getSignedUrl(req, res).catch(next)
 );
 
 export default router;

@@ -104,6 +104,7 @@ model Propriedade {
   jobs             Job[]
   cliente          Cliente?                 @relation(fields: [clienteId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   talhoes          Talhao[]
+  artefatos        Artefato[]
 
   @@unique([clienteId, codigoInterno])
   @@index([geom], map: "propriedades_geom_gix", type: Gist)
@@ -160,18 +161,22 @@ model Job {
 }
 
 model Artefato {
-  id       String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  jobId    String?      @map("job_id") @db.Uuid
-  talhaoId String?      @map("talhao_id") @db.Uuid
-  tipo     ArtefatoTipo
-  formato  String?      @db.VarChar(40)
-  indice   String?      @db.VarChar(40)
-  caminho  String       @db.VarChar(255)
-  checksum String?      @db.VarChar(64)
-  metadata Json         @default("{}")
-  geradoEm DateTime?    @default(now()) @map("gerado_em") @db.Timestamptz(6)
-  job      Job?         @relation(fields: [jobId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  talhao   Talhao?      @relation(fields: [talhaoId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id              String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  identificador   String?      @unique @db.VarChar(100)
+  jobId           String?      @map("job_id") @db.Uuid
+  talhaoId        String?      @map("talhao_id") @db.Uuid
+  propriedadeId   String?      @map("propriedade_id") @db.Uuid
+  tipo            ArtefatoTipo
+  formato         String?      @db.VarChar(40)
+  indice          String?      @db.VarChar(40)
+  caminho         String       @db.VarChar(255)
+  checksum        String?      @db.VarChar(64)
+  metadata        Json         @default("{}")
+  dataReferencia  DateTime?    @map("data_referencia") @db.Timestamptz(6)
+  geradoEm        DateTime?    @default(now()) @map("gerado_em") @db.Timestamptz(6)
+  job             Job?         @relation(fields: [jobId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  talhao          Talhao?      @relation(fields: [talhaoId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  propriedade     Propriedade? @relation(fields: [propriedadeId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([jobId, caminho])
   @@map("artefatos")

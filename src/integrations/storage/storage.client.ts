@@ -11,6 +11,17 @@ export class StorageClient {
   }
 
   /**
+   * Retorna um stream de leitura para um arquivo no GCS.
+   * Útil para fazer proxy de arquivos sem expor URLs assinadas.
+   */
+  getReadStream(path: string) {
+    return this.storage
+      .bucket(this.bucketName)
+      .file(path)
+      .createReadStream();
+  }
+
+  /**
    * Gera uma URL assinada para leitura de um arquivo no GCS.
    * @param path Caminho completo do arquivo dentro do bucket (ex: processed/ID/file.tif)
    * @param expiresIn Segundos até a expiração (default 15 minutos)
