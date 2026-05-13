@@ -1,4 +1,4 @@
-import { Artefato, ArtefatoTipo } from '@prisma/client';
+import { Artefato, ArtefatoTipo, Prisma } from '@prisma/client';
 import { prisma } from '../../config/prisma';
 
 export class ArtefatosRepository {
@@ -83,6 +83,17 @@ export class ArtefatosRepository {
   async create(data: any): Promise<Artefato> {
     return prisma.artefato.create({
       data,
+    });
+  }
+
+  async upsertByCaminho(
+    where: { jobId: string; caminho: string },
+    data: Prisma.ArtefatoCreateInput,
+  ): Promise<Artefato> {
+    return prisma.artefato.upsert({
+      where: { jobId_caminho: where },
+      create: data,
+      update: { metadata: data.metadata, geradoEm: new Date() },
     });
   }
 }

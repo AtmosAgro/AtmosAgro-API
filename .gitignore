@@ -28,3 +28,6 @@ Thumbs.db
 ### Docker volumes (named mounts)
 postgres_data/
 redis_data/
+
+### Claude
+.claude
