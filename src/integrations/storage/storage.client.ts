@@ -1,54 +1,78 @@
 import { Storage, GetSignedUrlConfig } from '@google-cloud/storage';
+import { createReadStream, promises as fs } from 'fs';
+import path from 'path';
 import { env } from '../../config/env';
 
+const DEFAULT_LOCAL_PATH = path.resolve(process.cwd(), '..', 'storage');
+
+/**
+ * Normaliza o caminho do artefato: aceita tanto `gs://bucket/path` quanto `path`
+ * e retorna sempre o path relativo ao bucket.
+ */
+function normalizePath(filePath: string): string {
+  if (!filePath.startsWith('gs://')) return filePath;
+  const withoutScheme = filePath.slice(5);
+  const slashIdx = withoutScheme.indexOf('/');
+  return slashIdx === -1 ? withoutScheme : withoutScheme.slice(slashIdx + 1);
+}
+
 export class StorageClient {
-  private storage: Storage;
+  private storage: Storage | null;
   private bucketName: string;
+  private localBasePath: string;
+  private isLocal: boolean;
 
   constructor() {
-    this.storage = new Storage();
+    this.isLocal = env.STORAGE_DRIVER === 'local';
     this.bucketName = env.GCS_BUCKET || 'atmos-agro-data-lake-dev';
+    this.localBasePath = env.LOCAL_STORAGE_PATH || DEFAULT_LOCAL_PATH;
+    this.storage = this.isLocal ? null : new Storage();
   }
 
-  /**
-   * Retorna um stream de leitura para um arquivo no GCS.
-   * Útil para fazer proxy de arquivos sem expor URLs assinadas.
-   */
-  getReadStream(path: string) {
-    return this.storage
-      .bucket(this.bucketName)
-      .file(path)
-      .createReadStream();
+  getReadStream(filePath: string) {
+    const normalized = normalizePath(filePath);
+    if (this.isLocal) {
+      return createReadStream(path.join(this.localBasePath, normalized));
+    }
+    return this.storage!.bucket(this.bucketName).file(normalized).createReadStream();
   }
 
-  /**
-   * Gera uma URL assinada para leitura de um arquivo no GCS.
-   * @param path Caminho completo do arquivo dentro do bucket (ex: processed/ID/file.tif)
-   * @param expiresIn Segundos até a expiração (default 15 minutos)
-   */
-  async getSignedUrl(path: string, expiresIn: number = 15 * 60): Promise<string> {
+  async downloadBuffer(filePath: string): Promise<Buffer> {
+    const normalized = normalizePath(filePath);
+    if (this.isLocal) {
+      return fs.readFile(path.join(this.localBasePath, normalized));
+    }
+    const [contents] = await this.storage!.bucket(this.bucketName).file(normalized).download();
+    return contents;
+  }
+
+  async getSignedUrl(filePath: string, expiresIn: number = 15 * 60): Promise<string> {
+    const normalized = normalizePath(filePath);
+    if (this.isLocal) {
+      const err = new Error('Local storage driver does not support signed URLs.');
+      err.name = 'StorageUnsupported';
+      throw err;
+    }
     const options: GetSignedUrlConfig = {
       version: 'v4',
       action: 'read',
       expires: Date.now() + expiresIn * 1000,
     };
-
-    const [url] = await this.storage
-      .bucket(this.bucketName)
-      .file(path)
-      .getSignedUrl(options);
-
+    const [url] = await this.storage!.bucket(this.bucketName).file(normalized).getSignedUrl(options);
     return url;
   }
 
-  /**
-   * Verifica se um arquivo existe no bucket.
-   */
-  async exists(path: string): Promise<boolean> {
-    const [exists] = await this.storage
-      .bucket(this.bucketName)
-      .file(path)
-      .exists();
+  async exists(filePath: string): Promise<boolean> {
+    const normalized = normalizePath(filePath);
+    if (this.isLocal) {
+      try {
+        await fs.access(path.join(this.localBasePath, normalized));
+        return true;
+      } catch {
+        return false;
+      }
+    }
+    const [exists] = await this.storage!.bucket(this.bucketName).file(normalized).exists();
     return exists;
   }
 }

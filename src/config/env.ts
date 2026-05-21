@@ -15,6 +15,8 @@ const envSchema = z.object({
   CORE_SERVICE_TOKEN: z.string().min(1, 'CORE_SERVICE_TOKEN é obrigatório.'),
   API_BASE_URL: z.string().url('API_BASE_URL deve ser uma URL válida.'),
   GCS_BUCKET: z.string().default('atmos-agro-data-lake-dev'),
+  STORAGE_DRIVER: z.enum(['gcs', 'local']).default('gcs'),
+  LOCAL_STORAGE_PATH: z.string().optional(),
   CORS_ORIGIN: z.string().optional(),
   SUPABASE_URL: z.string().url(),
   SUPABASE_ANON_KEY: z.string().min(1, 'SUPABASE_ANON_KEY é obrigatório.'),

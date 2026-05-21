@@ -46,4 +46,15 @@ router.get(
   (req, res, next) => artefatosController.getSignedUrl(req, res).catch(next)
 );
 
+/**
+ * @route GET /api/artefatos/:id/download
+ * @desc Faz stream do arquivo do GCS pela API. Usado como fallback quando o ambiente
+ *       não consegue gerar Signed URLs (ex: ADC com credenciais de usuário em dev local).
+ */
+router.get(
+  '/:id/download',
+  authMiddleware,
+  (req, res, next) => artefatosController.download(req, res).catch(next)
+);
+
 export default router;

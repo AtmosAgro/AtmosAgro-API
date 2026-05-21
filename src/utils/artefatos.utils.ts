@@ -19,27 +19,44 @@ export interface CaminhoParseado {
 }
 
 /**
- * Faz o parse do caminho GCS e extrai propriedadeId, data e índice.
- * Retorna null se o caminho não seguir a convenção esperada.
+ * Faz o parse do caminho do storage e extrai propriedadeId, data e índice.
+ * Aceita dois formatos:
+ *   - Novo (AT-21): processed/{clienteId}/{propriedadeId}/{YYYY-MM-DD}/{indice}.tif
+ *   - Legacy:      processed/{propriedadeId}/{YYYY-MM-DD}_{INDICE}.tif
+ * Retorna null se o caminho não seguir nenhuma das convenções.
  */
 export function parseCaminho(caminho: string): CaminhoParseado | null {
-  // esperado: processed/{uuid}/{YYYY-MM-DD}_{INDICE}.tif
-  const parts = caminho.split('/');
-  if (parts.length < 3 || parts[0] !== 'processed') return null;
+  // Aceita prefixo gs://bucket/ opcional
+  const stripped = caminho.startsWith('gs://')
+    ? caminho.slice(5).split('/').slice(1).join('/')
+    : caminho;
 
-  const propriedadeId = parts[1];
-  const filename = parts[parts.length - 1]; // "2025-12-29_NDVI.tif"
-  const withoutExt = filename.replace(/\.tif$/i, ''); // "2025-12-29_NDVI"
+  const parts = stripped.split('/');
+  if (parts[0] !== 'processed') return null;
 
-  const underscoreIdx = withoutExt.indexOf('_');
-  if (underscoreIdx === -1) return null;
+  // Formato novo: processed/{clienteId}/{propriedadeId}/{YYYY-MM-DD}/{indice}.tif (5 partes)
+  if (parts.length === 5) {
+    const propriedadeId = parts[2];
+    const data = parts[3];
+    const indice = parts[4].replace(/\.tif{1,2}$/i, '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return null;
+    return { propriedadeId, data, indice };
+  }
 
-  const data = withoutExt.slice(0, underscoreIdx);   // "2025-12-29"
-  const indice = withoutExt.slice(underscoreIdx + 1); // "NDVI"
+  // Formato legacy: processed/{propriedadeId}/{YYYY-MM-DD}_{INDICE}.tif (3 partes)
+  if (parts.length === 3) {
+    const propriedadeId = parts[1];
+    const filename = parts[2];
+    const withoutExt = filename.replace(/\.tif{1,2}$/i, '');
+    const underscoreIdx = withoutExt.indexOf('_');
+    if (underscoreIdx === -1) return null;
+    const data = withoutExt.slice(0, underscoreIdx);
+    const indice = withoutExt.slice(underscoreIdx + 1);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return null;
+    return { propriedadeId, data, indice };
+  }
 
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return null;
-
-  return { propriedadeId, data, indice };
+  return null;
 }
 
 /**

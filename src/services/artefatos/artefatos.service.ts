@@ -111,4 +111,28 @@ export class ArtefatosService {
     return { signedUrl, expiresAt };
   }
 
+  /**
+   * Baixa o arquivo do GCS como Buffer, após validar tenancy.
+   * Usado como fallback quando não dá para assinar URLs (ex: ADC com user creds em dev local).
+   */
+  async getDownloadBuffer(artefatoId: string, authClienteId: string) {
+    const artefato = await this.artefatosRepository.findById(artefatoId);
+
+    if (!artefato) throw new NotFoundError('Artefato não encontrado');
+
+    const artefatosClienteId =
+      artefato.talhao?.propriedade?.clienteId || artefato.propriedade?.clienteId;
+
+    if (artefatosClienteId !== authClienteId) {
+      throw new ForbiddenError('Acesso negado a este artefato');
+    }
+
+    const buffer = await this.storage.downloadBuffer(artefato.caminho);
+    const contentType = artefato.caminho.endsWith('.tif') || artefato.caminho.endsWith('.tiff')
+      ? 'image/tiff'
+      : 'application/octet-stream';
+
+    return { buffer, contentType };
+  }
+
 }

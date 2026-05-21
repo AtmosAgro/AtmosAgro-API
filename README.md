@@ -1,70 +1,98 @@
-# 🛰️ CanaVision API (AtmosAgro)
+# AtmosAgro-API
 
-API Node.js de alto desempenho para orquestração de processamento de imagens de satélite e gestão agronômica. Desenvolvida com **Express**, **TypeScript**, **Prisma (PostgreSQL)** e integração nativa com **Google Cloud Storage**.
+Backend REST multitenant da plataforma AtmosAgro — Node.js + TypeScript + Express + Prisma. Cuida de autenticação, gestão geoespacial (Propriedades/Talhões PostGIS), catálogo de artefatos GeoTIFF e orquestração dos jobs de processamento Sentinel-2 (dispara o `AtmosAgro-Core` via fila BullMQ e processa o callback).
 
-## 🚀 Funcionalidades Principais
-- **Autenticação Multitenant:** Gestão de usuários e clientes via Supabase Auth com isolamento rigoroso de dados (`clienteId`).
-- **Gestão Geoespacial:** CRUD de Propriedades e Talhões com suporte a geometrias complexas (PostGIS).
-- **Entrega de Mapas:** Geração de **Signed URLs** para visualização e download de GeoTIFFs (NDVI, NDWI) armazenados no GCS.
-- **Orquestração de Jobs:** Pipeline assíncrono para processamento de imagens Sentinel-2 via core Python.
+> **Arquitetura completa:** [AtmosAgro-API — Arquitetura](https://atmosagro.atlassian.net/wiki/spaces/AT/pages/37715970/AtmosAgro-API+Arquitetura) (Confluence)
+> **Reference de endpoints (Artefatos):** [API Reference — Artefatos](https://atmosagro.atlassian.net/wiki/spaces/AT/pages/37748737/API+Reference+Artefatos)
 
-## 🏗️ Estrutura do Projeto
-- `src/api/` – Controladores, rotas e validadores (Zod) organizados por domínio.
-- `src/services/` – Camada de lógica de negócio e orquestração.
-- `src/repositories/` – Abstração de acesso ao banco via Prisma.
-- `src/integrations/` – Conectores (GCS, SICAR, Supabase).
-- `docs/` – Documentação detalhada dos endpoints (padrão Confluence).
+## Stack
 
-## 🛠️ Setup do Ambiente
+Node 20+, TypeScript, Express, Prisma 5, PostgreSQL 15 + PostGIS (via Supabase), Redis 7 + BullMQ, Google Cloud Storage, Supabase Auth, Zod, Pino, Jest.
 
-### Pré-requisitos
-- Node.js LTS (v20+)
-- PostgreSQL com extensões `postgis` e `uuid-ossp`
-- Google Cloud SDK (autenticado) para acesso ao GCS
+## Quickstart local
 
-### Instalação
 ```bash
 npm install
-
-cp .env.example .env
-
+cp .env.example .env   # preencha conforme abaixo
 npm run prisma:generate
-
-npm run dev
+npm run dev            # ts-node-dev na porta 8080
 ```
 
-### Configuração do Banco
-O schema utiliza campos espaciais. Em qualquer ambiente novo, garanta as extensões:
-```sql
-CREATE EXTENSION IF NOT EXISTS postgis;
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-```
+### Subindo Postgres + Redis localmente
 
-## 📦 Variáveis de Ambiente Necessárias (.env)
-| Variável | Descrição |
-| :--- | :--- |
-| `DATABASE_URL` | String de conexão PostgreSQL |
-| `GCS_BUCKET` | Nome do bucket para armazenamento de GeoTIFFs |
-| `SUPABASE_URL` | Endpoint do seu projeto Supabase |
-| `SUPABASE_ANON_KEY` | Chave anônima para autenticação |
-| `SUPABASE_JWT_SECRET` | Secret para validação de tokens |
-
-## 📖 Documentação da API
-A documentação detalhada de cada domínio pode ser encontrada em:
-- `docs/api/Autenticacao/` - Fluxos de login e registro.
-- `docs/api/Propriedades/` - Gestão de fazendas.
-- `docs/api/Imagens/` - **Download e visualização de GeoTIFFs.**
-- `docs/api/Talhoes/` - Subdivisões e áreas de plantio.
-
-## 🐳 Docker e Deploy
-A API está preparada para execução no **Google Cloud Run**.
 ```bash
-# Build e Deploy via Cloud Build
-gcloud builds submit --tag gcr.io/<PROJECT_ID>/canavision-api .
-
-# Deploy Cloud Run
-gcloud run deploy canavision-api --image gcr.io/<PROJECT_ID>/canavision-api
+docker-compose up
 ```
 
----
-© 2026 AtmosAgro - Inteligência Geográfica para o Campo.
+### Variáveis obrigatórias no `.env`
+
+- `DATABASE_URL` (Postgres com PostGIS)
+- `REDIS_URL` (Redis 7)
+- `CORE_BASE_URL`, `CORE_SERVICE_TOKEN` (integração com AtmosAgro-Core)
+- `API_BASE_URL` (URL pública desta API, usada pelo Core nos callbacks)
+- `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_PASSWORD_RESET_REDIRECT`, `SUPABASE_JWT_SECRET`
+
+Para dev sem GCS, use `STORAGE_DRIVER=local` (signed URL fica indisponível; só funciona o stream proxy via `LOCAL_STORAGE_PATH`).
+
+Lista completa de env vars no [Confluence (seção 9)](https://atmosagro.atlassian.net/wiki/spaces/AT/pages/37715970/AtmosAgro-API+Arquitetura).
+
+## Scripts
+
+```bash
+npm run dev            # watch mode (ts-node-dev)
+npm run build          # tsc
+npm run start          # roda dist/
+npm run lint           # eslint
+npm run format         # prettier
+npm test               # jest (sem testes ainda)
+npm run prisma:generate
+npm run prisma:migrate
+```
+
+### Scripts de seed (em `scripts/`)
+
+```bash
+ts-node scripts/seed-roles.ts
+ts-node scripts/seed-usina-moreno.ts   # cliente + propriedade + talhões de demo
+ts-node scripts/mock-artefatos.ts      # artefatos fake para a Usina Moreno
+```
+
+## Endpoints (resumo)
+
+| Domínio | Auth | Rotas |
+| --- | --- | --- |
+| `/api/auth` | pública | register, login, logout, refresh-token, forgot-password, reset-password |
+| `/api/propriedades` | cookie | CRUD + `:id/talhoes` |
+| `/api/talhoes` | cookie | CRUD |
+| `/api/artefatos` | cookie | list, byPropriedade, byId, signed-url, download |
+| `/api/jobs` | cookie | create, list, getById |
+| `/api/jobs/:id/{complete,fail}` | `x-service-token` | callbacks do Core |
+| `/api/health` | pública | liveness simples |
+
+Detalhes (request/response/exemplos) no Confluence.
+
+## Layout
+
+```
+src/
+├── api/              # Routes + Controllers + Validators (Zod)
+├── services/         # Regra de negócio + multitenancy
+├── repositories/     # Prisma (queries scoped por clienteId)
+├── integrations/     # supabase / storage(GCS) / core / sicar
+├── middlewares/      # auth (cookie JWT), service-token, validation, error-handler
+├── workers/          # BullMQ Worker + Queue + Processor (fila satellite-jobs)
+├── domain/ dtos/ events/  # tipos, contratos de resposta, emitters
+├── config/           # env.ts (Zod-validated), logger (Pino)
+└── app.ts server.ts  # bootstrap Express
+```
+
+Path aliases (`@api/*`, `@services/*`, etc.) configurados em `tsconfig.json`.
+
+## Deploy
+
+Containerizado via `Dockerfile`. Alvo de produção: **Google Cloud Run**.
+
+```bash
+gcloud builds submit --tag gcr.io/<PROJECT_ID>/atmos-api .
+gcloud run deploy atmos-api --image gcr.io/<PROJECT_ID>/atmos-api
+```
