@@ -105,10 +105,36 @@ model Propriedade {
   cliente          Cliente?                 @relation(fields: [clienteId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   talhoes          Talhao[]
   artefatos        Artefato[]
+  sceneCatalog     SceneCatalog[]
+  sceneFetches     SceneCatalogFetch[]
 
   @@unique([clienteId, codigoInterno])
   @@index([geom], map: "propriedades_geom_gix", type: Gist)
   @@map("propriedades")
+}
+
+model SceneCatalog {
+  id            String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  propriedadeId String      @map("propriedade_id") @db.Uuid
+  dataCena      DateTime    @map("data_cena") @db.Date
+  cloudCover    Decimal?    @map("cloud_cover") @db.Decimal(5, 2)
+  productId     String?     @map("product_id") @db.VarChar(100)
+  fetchedAt     DateTime    @default(now()) @map("fetched_at") @db.Timestamptz(6)
+  propriedade   Propriedade @relation(fields: [propriedadeId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([propriedadeId, dataCena])
+  @@index([propriedadeId, dataCena])
+  @@map("scene_catalog")
+}
+
+model SceneCatalogFetch {
+  propriedadeId String      @map("propriedade_id") @db.Uuid
+  mes           DateTime    @db.Date
+  fetchedAt     DateTime    @default(now()) @map("fetched_at") @db.Timestamptz(6)
+  propriedade   Propriedade @relation(fields: [propriedadeId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([propriedadeId, mes])
+  @@map("scene_catalog_fetch")
 }
 
 model Talhao {

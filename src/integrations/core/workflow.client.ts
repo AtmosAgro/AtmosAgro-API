@@ -11,6 +11,18 @@ export interface CoreProcessPayload {
   indices: string[] | null;
 }
 
+export interface CoreScenesAvailablePayload {
+  geometry: Record<string, unknown>;
+  date_range: { start: string; end: string };
+  cloud_cover_max: number;
+}
+
+export interface CoreSceneSummary {
+  date: string;
+  cloud_cover: number | null;
+  product_id: string;
+}
+
 export class CoreClient {
   constructor(
     private readonly baseUrl: string = env.CORE_BASE_URL,
@@ -34,5 +46,27 @@ export class CoreClient {
     }
 
     logger.debug({ jobId: payload.job_id }, 'Job dispatched to Core');
+  }
+
+  async listAvailableScenes(
+    payload: CoreScenesAvailablePayload,
+  ): Promise<CoreSceneSummary[]> {
+    const response = await fetch(`${this.baseUrl}/scenes/available`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.token}`,
+      },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(60_000),
+    });
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => '');
+      throw new Error(`Core responded ${response.status}: ${body}`);
+    }
+
+    const data = (await response.json()) as { scenes: CoreSceneSummary[] };
+    return data.scenes ?? [];
   }
 }

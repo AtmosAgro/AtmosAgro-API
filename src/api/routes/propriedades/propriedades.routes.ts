@@ -2,11 +2,14 @@ import { Router } from 'express';
 import { PropriedadeController } from '../../controllers/propriedades/propriedades.controller';
 import { PropriedadeValidator } from '../../validators/propriedades/propriedades.validator';
 import { TalhaoController } from '../../controllers/talhoes/talhoes.controller';
+import { ScenesController } from '../../controllers/scenes/scenes.controller';
+import { ScenesValidator } from '../../validators/scenes/scenes.validator';
 import { authMiddleware } from '../../../middlewares/auth.middleware';
 
 const router = Router();
 const propriedadeController = new PropriedadeController();
 const talhaoController = new TalhaoController();
+const scenesController = new ScenesController();
 
 router.post(
   '/',
@@ -52,6 +55,14 @@ router.get(
     next();
   },
   (req, res, next) => talhaoController.findAll(req, res).catch(next)
+);
+
+router.get(
+  '/:propriedadeId/scenes/available',
+  authMiddleware,
+  ScenesValidator.validatePropriedadeId,
+  ScenesValidator.validateAvailableQuery,
+  (req, res, next) => scenesController.listAvailable(req, res).catch(next)
 );
 
 export default router;
