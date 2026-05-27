@@ -4,12 +4,15 @@ import { PropriedadeValidator } from '../../validators/propriedades/propriedades
 import { TalhaoController } from '../../controllers/talhoes/talhoes.controller';
 import { ScenesController } from '../../controllers/scenes/scenes.controller';
 import { ScenesValidator } from '../../validators/scenes/scenes.validator';
+import { JobsController } from '../../controllers/jobs/jobs.controller';
+import { JobValidator } from '../../validators/jobs/jobs.validator';
 import { authMiddleware } from '../../../middlewares/auth.middleware';
 
 const router = Router();
 const propriedadeController = new PropriedadeController();
 const talhaoController = new TalhaoController();
 const scenesController = new ScenesController();
+const jobsController = new JobsController();
 
 router.post(
   '/',
@@ -63,6 +66,14 @@ router.get(
   ScenesValidator.validatePropriedadeId,
   ScenesValidator.validateAvailableQuery,
   (req, res, next) => scenesController.listAvailable(req, res).catch(next)
+);
+
+router.post(
+  '/:propriedadeId/jobs/batch',
+  authMiddleware,
+  ScenesValidator.validatePropriedadeId,
+  JobValidator.createBatchJob,
+  (req, res, next) => jobsController.createBatch(req, res).catch(next)
 );
 
 export default router;

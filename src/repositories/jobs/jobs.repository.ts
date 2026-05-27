@@ -34,6 +34,23 @@ export class JobsRepository {
     });
   }
 
+  async findActiveByPropriedade(propriedadeId: string): Promise<Job[]> {
+    return prisma.job.findMany({
+      where: {
+        propriedadeId,
+        status: { in: [JobStatus.pending, JobStatus.running] },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async createMany(rows: Prisma.JobCreateManyInput[]): Promise<string[]> {
+    if (rows.length === 0) return [];
+    // createMany não retorna IDs em Postgres antes do Prisma 5.14; usamos transação de creates individuais.
+    const created = await prisma.$transaction(rows.map((row) => prisma.job.create({ data: row })));
+    return created.map((j) => j.id);
+  }
+
   async listByCliente(clienteId: string): Promise<Job[]> {
     return prisma.job.findMany({
       where: { clienteId },

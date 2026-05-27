@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { JobsService } from '../../../services/jobs/jobs.service';
 import { UnauthorizedError } from '../../../common/errors/application-error';
-import { createJobSchema } from '../../../dtos/jobs/jobs.dto';
+import { createBatchJobSchema, createJobSchema } from '../../../dtos/jobs/jobs.dto';
 import { completeJobSchema, failJobSchema } from '../../../dtos/jobs/jobs-callback.dto';
 
 export class JobsController {
@@ -45,5 +45,19 @@ export class JobsController {
     const dto = failJobSchema.parse(req.body);
     const job = await this.jobsService.fail(req.params.id, dto);
     return res.status(200).json(job);
+  }
+
+  async createBatch(req: Request, res: Response): Promise<Response> {
+    if (!req.user?.clienteId) {
+      throw new UnauthorizedError('Usuário não autenticado ou sem cliente associado.');
+    }
+
+    const dto = createBatchJobSchema.parse(req.body);
+    const result = await this.jobsService.createBatch(
+      req.user.clienteId,
+      req.params.propriedadeId,
+      dto,
+    );
+    return res.status(201).json(result);
   }
 }

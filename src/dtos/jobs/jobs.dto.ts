@@ -13,6 +13,43 @@ export const createJobSchema = z.object({
 
 export type CreateJobDto = z.infer<typeof createJobSchema>;
 
+const MAX_BATCH_RANGE_DAYS = 730;
+
+export const cloudBucketSchema = z.enum(['low', 'partial', 'cloudy']);
+export type CloudBucket = z.infer<typeof cloudBucketSchema>;
+
+export const createBatchJobSchema = z
+  .object({
+    from: z.string().date('Data inicial inválida (esperado YYYY-MM-DD).'),
+    to: z.string().date('Data final inválida (esperado YYYY-MM-DD).'),
+    cloudBuckets: z
+      .array(cloudBucketSchema)
+      .min(1, 'Selecione pelo menos um bucket de nuvem.'),
+    indices: z.array(z.string().min(1)).optional(),
+  })
+  .refine((v) => v.from <= v.to, {
+    message: '`from` deve ser <= `to`.',
+    path: ['from'],
+  })
+  .refine(
+    (v) => {
+      const fromMs = Date.parse(v.from);
+      const toMs = Date.parse(v.to);
+      return (toMs - fromMs) / (1000 * 60 * 60 * 24) <= MAX_BATCH_RANGE_DAYS;
+    },
+    { message: `Intervalo máximo é ${MAX_BATCH_RANGE_DAYS} dias.`, path: ['to'] },
+  );
+
+export type CreateBatchJobDto = z.infer<typeof createBatchJobSchema>;
+
+export interface CreateBatchJobResponseDto {
+  created: number;
+  skippedExisting: number;
+  skippedRunning: number;
+  skippedMonthsNotFetched: string[];
+  jobIds: string[];
+}
+
 export interface JobResponseDto {
   id: string;
   clienteId: string | null;

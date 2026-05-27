@@ -93,7 +93,31 @@ export class ArtefatosRepository {
     return prisma.artefato.upsert({
       where: { jobId_caminho: where },
       create: data,
-      update: { metadata: data.metadata, geradoEm: new Date() },
+      update: {
+        metadata: data.metadata,
+        dataReferencia: data.dataReferencia,
+        geradoEm: new Date(),
+      },
     });
+  }
+
+  async findDatesByPropriedadeAndRange(
+    propriedadeId: string,
+    from: Date,
+    to: Date,
+  ): Promise<Set<string>> {
+    const rows = await prisma.artefato.findMany({
+      where: {
+        propriedadeId,
+        dataReferencia: { gte: from, lte: to },
+      },
+      select: { dataReferencia: true },
+      distinct: ['dataReferencia'],
+    });
+    const set = new Set<string>();
+    for (const row of rows) {
+      if (row.dataReferencia) set.add(row.dataReferencia.toISOString().slice(0, 10));
+    }
+    return set;
   }
 }
