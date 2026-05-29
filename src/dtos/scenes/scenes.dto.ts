@@ -15,9 +15,9 @@ export const scenesAvailableQuerySchema = z
     (v) => {
       const fromMs = Date.parse(v.from);
       const toMs = Date.parse(v.to);
-      return (toMs - fromMs) / (1000 * 60 * 60 * 24) <= 90;
+      return (toMs - fromMs) / (1000 * 60 * 60 * 24) <= 730;
     },
-    { message: 'Intervalo máximo é 90 dias', path: ['to'] },
+    { message: 'Intervalo máximo é 730 dias (2 anos)', path: ['to'] },
   );
 
 export type ScenesAvailableQueryDto = z.infer<typeof scenesAvailableQuerySchema>;
