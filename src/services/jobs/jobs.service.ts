@@ -10,6 +10,7 @@ import {
   CreateBatchJobResponseDto,
   CreateJobDto,
   JobResponseDto,
+  ListJobsQueryDto,
 } from '../../dtos/jobs/jobs.dto';
 import { CompleteJobDto, FailJobDto } from '../../dtos/jobs/jobs-callback.dto';
 import { ApplicationError } from '../../common/errors/application-error';
@@ -220,9 +221,15 @@ export class JobsService {
     };
   }
 
-  async listByCliente(clienteId: string): Promise<JobResponseDto[]> {
-    const jobs = await this.jobsRepository.listByCliente(clienteId);
-    return jobs.map(this._toDto);
+  async listByCliente(clienteId: string, query: ListJobsQueryDto = {}): Promise<JobResponseDto[]> {
+    const jobs = await this.jobsRepository.listByCliente(clienteId, {
+      status: query.status as JobStatus[] | undefined,
+      propriedadeId: query.propriedadeId,
+      from: query.from ? new Date(`${query.from}T00:00:00Z`) : undefined,
+      // `to` é exclusivo no fim do dia para incluir tudo do dia escolhido
+      to: query.to ? new Date(`${query.to}T23:59:59.999Z`) : undefined,
+    });
+    return jobs.map((j) => this._toDto(j));
   }
 
   async findById(id: string, clienteId: string): Promise<JobResponseDto> {
@@ -304,11 +311,12 @@ export class JobsService {
     return this.jobsRepository.expireStale(cutoff);
   }
 
-  private _toDto(job: Job): JobResponseDto {
+  private _toDto(job: Job & { propriedade?: { nome: string } | null }): JobResponseDto {
     return {
       id: job.id,
       clienteId: job.clienteId,
       propriedadeId: job.propriedadeId,
+      propriedadeNome: job.propriedade?.nome ?? null,
       talhaoId: job.talhaoId,
       pipeline: job.pipeline,
       status: job.status,

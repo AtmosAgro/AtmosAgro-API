@@ -13,6 +13,29 @@ export const createJobSchema = z.object({
 
 export type CreateJobDto = z.infer<typeof createJobSchema>;
 
+const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data deve ser YYYY-MM-DD');
+const jobStatusValues = ['pending', 'running', 'succeeded', 'failed'] as const;
+
+export const listJobsQuerySchema = z.object({
+  status: z
+    .string()
+    .optional()
+    .transform((v) => {
+      if (!v) return undefined;
+      return v
+        .split(',')
+        .map((s) => s.trim())
+        .filter((s): s is (typeof jobStatusValues)[number] =>
+          (jobStatusValues as readonly string[]).includes(s),
+        );
+    }),
+  propriedadeId: z.string().uuid('ID de propriedade inválido.').optional(),
+  from: isoDate.optional(),
+  to: isoDate.optional(),
+});
+
+export type ListJobsQueryDto = z.infer<typeof listJobsQuerySchema>;
+
 const MAX_BATCH_RANGE_DAYS = 730;
 
 export const cloudBucketSchema = z.enum(['low', 'partial', 'cloudy']);
@@ -54,6 +77,7 @@ export interface JobResponseDto {
   id: string;
   clienteId: string | null;
   propriedadeId: string | null;
+  propriedadeNome: string | null;
   talhaoId: string | null;
   pipeline: string;
   status: JobStatus;

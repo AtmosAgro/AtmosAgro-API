@@ -51,9 +51,29 @@ export class JobsRepository {
     return created.map((j) => j.id);
   }
 
-  async listByCliente(clienteId: string): Promise<Job[]> {
+  async listByCliente(
+    clienteId: string,
+    filters: {
+      status?: JobStatus[];
+      propriedadeId?: string;
+      from?: Date;
+      to?: Date;
+    } = {},
+  ): Promise<Array<Job & { propriedade: { nome: string } | null; talhao: { nome: string | null } | null }>> {
+    const where: Prisma.JobWhereInput = { clienteId };
+    if (filters.status && filters.status.length > 0) {
+      where.status = { in: filters.status };
+    }
+    if (filters.propriedadeId) {
+      where.propriedadeId = filters.propriedadeId;
+    }
+    if (filters.from || filters.to) {
+      where.createdAt = {};
+      if (filters.from) where.createdAt.gte = filters.from;
+      if (filters.to) where.createdAt.lte = filters.to;
+    }
     return prisma.job.findMany({
-      where: { clienteId },
+      where,
       orderBy: { createdAt: 'desc' },
       include: {
         propriedade: { select: { nome: true } },
