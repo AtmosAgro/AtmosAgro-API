@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { JobsController } from '../../controllers/jobs/jobs.controller';
+import { JobValidator } from '../../validators/jobs/jobs.validator';
 import { authMiddleware } from '../../../middlewares/auth.middleware';
 import { serviceTokenMiddleware } from '../../../middlewares/service-token.middleware';
 
@@ -15,6 +16,7 @@ router.post(
 router.get(
   '/',
   authMiddleware,
+  JobValidator.listJobsQuery,
   (req, res, next) => jobsController.list(req, res).catch(next)
 );
 
