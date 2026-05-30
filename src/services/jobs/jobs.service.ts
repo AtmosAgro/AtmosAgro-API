@@ -15,7 +15,7 @@ import {
 import { CompleteJobDto, FailJobDto } from '../../dtos/jobs/jobs-callback.dto';
 import { ApplicationError } from '../../common/errors/application-error';
 
-const STALE_JOB_MINUTES = 60;
+const STALE_JOB_MINUTES = 180;
 
 const CLOUD_BUCKET_RANGES: Record<CloudBucket, { min: number; max: number }> = {
   low: { min: 0, max: 30 },
@@ -249,7 +249,11 @@ export class JobsService {
       throw new ApplicationError('Job não encontrado.', 404);
     }
 
-    if (job.status !== JobStatus.running) {
+    // Aceita `running` (caso comum) e `failed` (race do expire-stale: Core terminou
+    // depois do cron marcar como expirado). Rejeita apenas estados terminais válidos
+    // — `succeeded` (já concluído com sucesso) e `pending` (callback antes do worker
+    // ter despachado, situação inválida) — pra não sobrescrever cegamente.
+    if (job.status !== JobStatus.running && job.status !== JobStatus.failed) {
       throw new ApplicationError(
         `Job não pode ser concluído: status atual é '${job.status}'.`,
         409
@@ -279,6 +283,7 @@ export class JobsService {
 
     const updated = await this.jobsRepository.updateStatus(jobId, JobStatus.succeeded, {
       finalizadoEm: new Date(),
+      erroMensagem: null,
     });
 
     return this._toDto(updated);
